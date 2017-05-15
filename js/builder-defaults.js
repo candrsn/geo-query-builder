@@ -13,10 +13,10 @@ builderDefaults.value("defaults", {
     format: "json",
   },
   bounds: {
-    minx: 96.816941408,
-    miny: -43.74050960205765,  
-    maxx: 159.109219008,
-    maxy: -9.142175976703609,
+    minx: -110.816941408,
+    miny: 23.74050960205765,  
+    maxx: -77.109219008,
+    maxy: 49.142175976703609,
   },
   image: {
     width: 200,
