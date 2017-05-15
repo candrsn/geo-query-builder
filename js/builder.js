@@ -200,7 +200,7 @@ builder.controller("builder", ["$scope", "$http",
     // Function to initialise the map and associated behaviours
     $scope.initMap = function initMap() {
       var mapOptions = {
-        center: new google.maps.LatLng(-31.952162,135.175781), // Australia
+        center: new google.maps.LatLng(38.952162,-80.175781), // America
         zoom: 1,
         mapTypeId: google.maps.MapTypeId.ROADMAP
       };
