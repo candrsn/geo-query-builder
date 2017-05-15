@@ -1,0 +1,241 @@
+<!doctype>
+<html ng-app="builder">
+  <head>
+    <title>Geo Query Builder</title>
+    <script type="text/javascript" src="https://maps.googleapis.com/maps/api/js?libraries=drawing&sensor=false"></script>
+    <script src="lib/jquery-2.0.3.min.js"></script>
+    <script src="lib/xml2json.js"></script>
+    <script src="lib/angular.min.js"></script>
+    <script src="lib/angular-route.min.js"></script>
+
+    <script src="js/builder-defaults.js"></script>
+    <script src="js/builder-utils.js"></script>
+    <script src="js/builder-request.js"></script>
+    <script src="js/builder-capabilities.js"></script>
+    <script src="js/builder-directives.js"></script>
+    <script src="js/builder.js"></script>
+
+    <link href='http://fonts.googleapis.com/css?family=Fascinate|Signika:700' rel='stylesheet' type='text/css'>
+
+    <link rel="stylesheet" href="css/bootstrap.min.css">
+    <link rel="stylesheet" href="css/bootstrap-theme.min.css">
+    <link rel="stylesheet" href="css/main.css">
+  </head>
+
+  <body ng-controller="builder">
+    <div class="container">
+      <!-- Header -->
+      <header class="page-header">
+        <h1>Geo Query Builder</h1>
+      </header>
+
+      <!-- About -->
+      <div builder-section title="About" icon="question-sign" class="col-lg-12">
+        <p>
+          Geo Query Builder is a tool for generating queries for WMS and WFS servers.
+        </p>
+
+        <p>
+          Geo Query Builder automatically populates the list of request type, formats and features for each service.
+          This means you can simply build and preview the query by selecting one or two relevant options.
+          Then either download the data or use the request objects to generate your own series of requests.
+        </p>
+        
+        <p>
+          <strong>WMS</strong> is a Web Map Service and returns maps, or tiles for maps.
+        </p>
+        <p>
+          <strong>WFS</strong> is a Web Feature service and returns features as data which include geometry and properties. 
+        </p>
+      </div>
+
+      <form role="form" class="row">
+
+        <!-- General inputs -->
+        <fieldset builder-section title="Service Settings" icon="cog">
+          <div class="alert alert-danger" ng-show="capabilitiesError">
+            {{ capabilitiesError }}
+          </div>
+
+          <fieldset class="col-md-3">
+            <label for="host">WMS server:</label>
+            <select name="host" class="form-control" ng-model="request.host" ng-options="hostUrl as hostName for (hostName, hostUrl) in hosts"></select>
+            <input class="form-control" ng-model="request.host" ng-show="settings.manualinput"></input>
+          </fieldset>
+
+          <fieldset class="col-md-2">
+            <label for="service">Service type:</label>
+            <select name="service" class="form-control" ng-model="request.service" ng-options="service for service in services"></select>
+            <input class="form-control" ng-model="request.service" ng-show="settings.manualinput"></input>
+          </fieldset>
+
+          <fieldset class="col-md-2">
+            <label for="request">Request type:</label> 
+            <select name="request" class="form-control" ng-model="request.request" ng-options="requestName as requestName for (requestName, request) in requests"></select>
+            <input class="form-control" ng-model="request.request" ng-show="settings.manualinput"></input>
+          </fieldset>
+
+          <fieldset class="col-md-3">
+            <label for="format">Output format:</label>  
+            <select name="format" class="form-control" ng-model="request.format" ng-options="format for format in requests[request.request].formats"></select>
+            <input class="form-control" ng-model="request.format" ng-show="settings.manualinput"></input>
+          </fieldset>
+          
+          <fieldset class="col-md-2">
+            <label for="manualEntry">Manual inputs?</label>
+            <input name="manualEntry" id="manualEntry" type="checkbox" ng-model="settings.manualinput"></input>
+          </fieldset>
+        </fieldset>
+
+        <!-- Bounds inputs -->
+        <fieldset builder-section title="Geographic Bounds" icon="globe" class="col-lg-6">
+          <fieldset class="col-md-6">
+            <label>Input the geographic bounds for this request:</label>
+
+            <div class="row">
+              <label for="miny" class="col-md-2 control-label">South</label>
+              <div class="col-md-8">
+                <input name="miny" class="form-control" ng-model="request.bounds.miny">
+              </div>
+            </div>
+
+            <div class="row">
+              <label for="minx" class="col-md-2 control-label">West</label>
+              <div class="col-md-8">
+                <input name="minx" class="form-control" ng-model="request.bounds.minx">
+              </div>
+            </div>
+
+            <div class="row">
+              <label for="maxy" class="col-md-2 control-label">North</label>
+              <div class="col-md-8">
+                <input name="maxy" class="form-control" ng-model="request.bounds.maxy">
+              </div>
+            </div>
+
+            <div class="row">
+              <label for="maxx" class="col-md-2 control-label">East</label>
+              <div class="col-md-8">
+                <input name="maxx" class="form-control" ng-model="request.bounds.maxx">
+              </div>
+            </div>
+
+            <div class="row">
+              <label for="updateBbox" class="col-md-8 control-label">Resize bounds on feature selection</label>
+              <div class="col-md-2">
+                <input name="updateBbox" id="updateBbox" type="checkbox" ng-model="settings.autobounds"></input>
+              </div>
+            </div>
+          </fieldset>
+
+          <fieldset class="col-md-6">
+            <div id="map" ng-init="initMap()"></div>
+          </fieldset>
+        </fieldset>
+        
+        <!-- WMS inputs -->
+        <fieldset builder-section title="WMS Settings" icon="picture" class="col-lg-6" ng-show="request.service == 'WMS'">
+          <fieldset class="col-md-4 col-lg-6 has-error" ng-class="{'has-success': request.features}">
+            <label for="layers" class="control-label">Select the layers to request:</label>
+            <select name="layers" id="wms-layers" class="form-control" ng-model="request.features" ng-options="name as name for (name, feature) in featureList"
+              multiple="multiple" multiselect-dropdown required></select>
+            <input class="form-control" ng-model="request.feature" ng-show="settings.manualinput"></input>
+           </fieldset>
+
+          <fieldset class="col-md-4 col-lg-6">
+            <label>Input image width and height:</label>
+
+            <div class="row">
+              <label for="width" class="col-md-3 control-label">Width:</label>
+              <div class="col-md-6">
+                <input name="width" type="number" class="form-control" ng-model="request.image.width" step="10" min="0">
+              </div>
+              <label class="col-md-3 control-label">px</label>
+            </div>
+
+            <div class="row">
+              <label for="height" class="col-md-3 control-label">Height:</label>
+              <div class="col-md-6">
+                <input name="height" type="number" class="form-control" input-lg ng-model="request.image.height" step="10" min="0">
+              </div>
+              <label class="col-md-3 control-label">px</label>
+            </div>
+
+            <div class="row">
+              <label for="proportional" class="col-md-9 control-label">Proportional</label>
+              <div class="col-md-3">
+                <input name="proportional" id="proportional" type="checkbox" ng-model="settings.proportional"></input>
+              </div>
+            </div>
+          </fieldset>
+        </fieldset>
+
+        <!-- WFS inputs -->
+        <fieldset builder-section title="WFS Settings" icon="list-alt" class="col-lg-6" ng-show="request.service == 'WFS'">
+          <fieldset class="col-md-4 has-error" ng-class="{'has-success': request.feature}">
+            <label for="feature" class="form-label">Select the name of the feature type:</label>
+            <select name="feature" class="form-control" ng-model="request.feature" ng-options="name as name for (name, feature) in featureList"></select>
+            <input class="form-control" ng-model="request.feature" ng-show="settings.manualinput"></input>
+          </fieldset>
+         
+          <fieldset class="col-md-3"> 
+            <label for="featureLimit">Maximum number of features:</label>
+            <input name="featureLimit" class="form-control" type="number" ng-model="request.maxfeatures"></input>
+          </fieldset>       
+
+          <fieldset class="col-md-3">
+            <label for="version" class="form-label">WFS version number:</label>
+            <select name="version" class="form-control" ng-model="request.version" ng-options="version as version for version in versions"></select>
+            <input class="form-control" ng-model="request.version" ng-show="settings.manualinput"></input>
+          </fieldset>
+        </fieldset>
+        
+        <!-- ECQL input-->
+        <fieldset builder-section title="Data Filter" icon="filter" class="col-lg-6">
+          <fieldset class="col-md-8"> 
+            <label for="cql_filter">ECQL filter query:</label>
+            <textarea name="cql_filter" id="ecql-filter" class="form-control" ng-model="cql_filter"></textarea>
+            <a href="http://docs.geoserver.org/latest/en/user/filter/ecql_reference.html#filter-ecql-reference">ECQL Reference</a>
+          </fieldset>
+        </fieldset>
+      </form>
+        
+      <!-- WMS/WFS outputs -->
+      <div builder-section title="Data Preview" icon="eye-open" id="preview" class="panel-primary col-lg-6">
+        <div class="row">
+          <figure id="preview-image" class="col-md-4">
+            <h3>Image preview</h3>
+            <img class="img-thumbnail" ng-src="{{ imageURL(200) }}">
+          </figure>
+
+          <div class="col-md-6">
+            <h3>Feature properties</h3>
+
+            <table class="table" ng-repeat="(featureName, feature) in featureInfo | isIn:request.features">
+            <thead>
+              <tr>
+                <th><input type="checkbox" ng-model="include" ng-init="include = true" ng-change="includeProperties(feature, include)"></input></th>
+                <th colspan="2">{{ featureName }}</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr ng-repeat="property in feature">
+                <td><input type="checkbox" ng-model="property.include"></input></td> 
+                <td>{{ property.name }}</td> 
+                <td>{{ property.type }}</td>
+              </tr>
+            </tbody>
+            </table>
+          </div>
+        </div>
+      </div builder-section>
+
+      <!-- Request outputs -->
+      <div builder-section title="Request" icon="log-in" id="request" class="panel-success col-lg-6">
+        <p>Request URL: <a id="result-url" ng-href="{{ url() }}">{{ url() }}</a></p>
+        <p>Request JSON: <pre>{{ requestURL() | json }}</pre></p>
+        <p>Request CURL: <pre>{{ CURL() }}</pre></p>
+      </div>
+    </div>
+  </body>
+</html>
