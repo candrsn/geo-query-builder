@@ -2,7 +2,7 @@ var builderDefaults = angular.module('builder-defaults', []);
 
 /* Default values for service settings */
 builderDefaults.value("defaults", {
-  host: "NICTA - FSDF Administrative Units",
+  host: "FEMA - GEO API",
   service: "WMS",
   WMS: {
     request: "GetMap", 
