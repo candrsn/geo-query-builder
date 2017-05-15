@@ -22,7 +22,7 @@ builder.filter("isIn", function() {
 });
 
 builder.value("hosts", {
-  "FEMA - API": "http://gis.fema.gov/geoserver",
+  "FEMA - GEO API": "http://gis.fema.gov/geoserver/",
 });
 
 builder.value("services", [
