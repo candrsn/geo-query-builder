@@ -26,6 +26,10 @@ builderRequest.service("geoRequest", function() {
       data.height = params.image? params.image.height : 0;
       data.format = params.format;
     }
+    if (data.service == "WMS" && data.request == "GetFeatureInfo") {
+      data.query_layers = params.features ? params.features.join() : undefined;
+    }
+
     if (data.service == "WFS" && data.request != "GetCapabilities") {
       data.typeName = params.feature;
       if ( ! params.version ) {
