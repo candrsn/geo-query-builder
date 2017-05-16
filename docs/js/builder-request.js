@@ -28,10 +28,13 @@ builderRequest.service("geoRequest", function() {
     }
     if (data.service == "WFS" && data.request != "GetCapabilities") {
       data.typeName = params.feature;
+      if ( ! params.version ) {
+          params.version = '1.0.0';
+      }
       if (/^1/.test(params.version)) // version 1 and 2 differ in feature limit paramater names
-        data.maxFeatures = params.featureLimit;
+        data.maxFeatures = params.maxfeatures;
       else
-        data.count = params.featureLimit;
+        data.count = params.maxfeatures;
       data.outputFormat = params.format;
       data.version = params.version;
     }
