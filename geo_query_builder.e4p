@@ -1,12 +1,12 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE Project SYSTEM "Project-5.1.dtd">
 <!-- eric project file for project geo_query_builder -->
-<!-- Saved: 2017-05-24, 14:41:03 -->
+<!-- Saved: 2017-05-24, 16:56:08 -->
 <!-- Copyright (C) 2017 ,  -->
 <Project version="5.1">
   <Language>en_US</Language>
   <Hash>84b8c8a250f890dfbc30e735a35a2c5abd9b3bf7</Hash>
-  <ProgLanguage mixed="0">JavaScript</ProgLanguage>
+  <ProgLanguage mixed="1">JavaScript</ProgLanguage>
   <ProjectType>Web</ProjectType>
   <Description></Description>
   <Version>0.1</Version>
@@ -14,6 +14,11 @@
   <Email></Email>
   <Eol index="-1"/>
   <Sources>
+    <Source>css/bootstrap-theme.css</Source>
+    <Source>css/bootstrap-theme.min.css</Source>
+    <Source>css/bootstrap.css</Source>
+    <Source>css/bootstrap.min.css</Source>
+    <Source>css/main.css</Source>
     <Source>index.html</Source>
     <Source>js/builder-capabilities.js</Source>
     <Source>js/builder-defaults.js</Source>
@@ -21,13 +26,14 @@
     <Source>js/builder-request.js</Source>
     <Source>js/builder-utils.js</Source>
     <Source>js/builder.js</Source>
+    <Source>stub.html</Source>
   </Sources>
   <Forms/>
   <Translations/>
   <Resources/>
   <Interfaces/>
   <Others/>
-  <MainScript>index.html</MainScript>
+  <MainScript>stub.html</MainScript>
   <Vcs>
     <VcsType>Git</VcsType>
     <VcsOptions>
