@@ -11,7 +11,7 @@ builder.filter("isIn", function() {
 
   return function(obj, filterArray) {
     var newObj = {};
-    
+
     for (var key in obj) {
       if (isIn(key, filterArray) || isIn(obj[key], filterArray))
         newObj[key] = obj[key];
@@ -31,22 +31,23 @@ builder.value("services", [
 ]);
 
 builder.service("request", ["defaults", "hosts", "services",
-function(defaults, hosts, services) {
-  return {
-    host: hosts[defaults.host],
-    service: defaults.service,
-    version: undefined,
-    request: undefined,
-    bounds: defaults.bounds,
-    features: [],
-    image: {
-      width: defaults.image.width,
-      height: defaults.image.height,
-    },
-    maxfeatures: defaults.maxfeatures,
-    ECQLfilter: defaults.ECQLfilter,
-  };
-}]);
+  function(defaults, hosts, services) {
+    return {
+      host: hosts[defaults.host],
+      service: defaults.service,
+      version: undefined,
+      request: undefined,
+      bounds: defaults.bounds,
+      features: [],
+      image: {
+        width: defaults.image.width,
+        height: defaults.image.height,
+      },
+      maxfeatures: defaults.maxfeatures,
+      ECQLfilter: defaults.ECQLfilter,
+    };
+  }
+]);
 
 builder.service("settings", ["defaults", function(defaults) {
   return {
@@ -106,7 +107,7 @@ builder.controller("builder", ["$scope", "$http",
         $scope.request.features = undefined;
         $scope.request.feature = undefined;
         $scope.featureList = undefined;
-        
+
         $scope.requestTypes = undefined;
       }
 
@@ -119,7 +120,7 @@ builder.controller("builder", ["$scope", "$http",
           angular.extend($scope.request, cap.defaults);
           $scope.capabilitiesError = null;
         }).error(function(error) {
-          $scope.capabilitiesError = error? error : "Unable to retrieve the server's capabilities.";
+          $scope.capabilitiesError = error ? error : "Unable to retrieve the server's capabilities.";
 
         });
       }
@@ -134,7 +135,7 @@ builder.controller("builder", ["$scope", "$http",
         $scope.featureInfo = processFeatureInfo(xml);
         $scope.capabilitiesError = null;
       }).error(function(error) {
-        $scope.capabilitiesError = error? error: "Unable to retreive the feature's properties";
+        $scope.capabilitiesError = error ? error : "Unable to retreive the feature's properties";
       });
     }
     $scope.$watch('request.host', updateFeatureProperties);
@@ -161,14 +162,18 @@ builder.controller("builder", ["$scope", "$http",
         $scope.request.features = [feature];
       }
     });
-    
+
     // Update the width when the height or bbox changes
     // Update the height when the width changes
     function updateImageDimensions(newimg, oldimg) {
       newimg = angular.copy(newimg); // avoid changing the newimg data
+      if (!newimg) {
+        console.log('blank newimg prsented');
+        return;
+      }
 
       if (oldimg && $scope.settings.proportional && !$scope.autoResizing) {
-        var bboxChanged = newimg.width === undefined;
+        var bboxChanged = ((!newimg) || newimg['width'] === undefined);
 
         // Update height if width changed or bbox is changed or propotionality changed
         if (bboxChanged || newimg.width !== oldimg.width)
@@ -178,11 +183,12 @@ builder.controller("builder", ["$scope", "$http",
         if (newimg.height !== oldimg.height)
           $scope.request.image.width = getImageWidth($scope.request.bounds, $scope.request.image.height);
 
-        $scope.autoResizing = true;  // stop the next update
+        $scope.autoResizing = true; // stop the next update
       } else {
         $scope.autoResizing = false; // this update doesn't do anything, but the next update will
       }
     }
+
     $scope.$watch('request.image', updateImageDimensions, true);
     $scope.$watch('request.bounds', updateImageDimensions);
     $scope.$watch('settings.proportional', function() {
@@ -197,10 +203,145 @@ builder.controller("builder", ["$scope", "$http",
       }
     };
 
-    // Function to initialise the map and associated behaviours
     $scope.initMap = function initMap() {
+      var source = new ol.source.Vector({
+        wrapX: false
+      });
+
+      var bboxStyle = new ol.style.Style({
+        fill: new ol.style.Fill({
+          color: 'rgba(220, 220, 255, 0.3)'
+        }),
+        stroke: new ol.style.Stroke({
+          color: '#1010cc',
+          width: 2
+        })
+      });
+      var vector = new ol.layer.Vector({
+        source: source,
+        style: bboxStyle
+      });
+
+      var map = new ol.Map({
+        target: 'map',
+        layers: [
+          new ol.layer.Tile({
+            source: new ol.source.OSM()
+          }),
+          vector
+        ],
+        view: new ol.View({
+          center: ol.proj.fromLonLat([-95.5, 37.82]),
+          zoom: 3
+        })
+      });
+      var rectangle = new ol.geom.Polygon();
+
+      var value = 'Circle';
+      var geometryFunction = ol.interaction.Draw.createBox();
+
+      var drawBox = new ol.interaction.Draw({
+        source: source,
+        type: /** @type {ol.geom.GeometryType} */ (value),
+        geometryFunction: geometryFunction
+      });
+      map.addInteraction(drawBox);
+      drawBox.on('drawend', function(e) {
+        rectangle = e.feature.getGeometry();
+        console.log('WebMerc => Lat/Lon');
+        console.log(rectangle.getExtent());
+
+        rectangle.transform('EPSG:3857', 'EPSG:4326');
+        console.log(rectangle.getExtent());
+
+        updateMapBounds(rectangle.getExtent());
+      });
+
+
+      // Update bounds on map rectangle update
+      function updateMapBounds(bounds, updateShape) {
+        var rext = rectangle.getExtent();
+
+        $scope.request.bounds = {
+          minx: Number(rext[0]).toFixed(8),
+          maxx: Number(rext[2]).toFixed(8),
+          miny: Number(rext[1]).toFixed(8),
+          maxy: Number(rext[3]).toFixed(8),
+          CRS: "CRS:84"
+        };
+
+        $scope.$apply('request.bounds');
+
+      }
+
+      function castBBoxToNumber(bbox) {
+        bbox.miny = Number(bbox.miny) || 0;
+        bbox.maxy = Number(bbox.maxy) || 89.9990;
+        bbox.minx = Number(bbox.minx) || -10;
+        bbox.maxx = Number(bbox.maxx) || -145;
+
+        return bbox;
+      }
+
+      // convert the Angular bounding coords to an ol.Extent
+      function bboxToExtent(bbox, proj) {
+        var extent;
+
+        bbox = castBBoxToNumber(bbox);
+
+        if (bbox.miny == -90.0) {
+          bbox.miny = -89.999;
+        }
+        if (bbox.maxy == 90.0) {
+          bbox.maxy = 89.999;
+        }
+
+        console.log('bbox');
+        console.log(bbox);
+        var box1 = ol.proj.transform([bbox.minx, bbox.miny], 'EPSG:4326', proj);
+        var box2 = ol.proj.transform([bbox.maxx, bbox.maxy], 'EPSG:4326', proj);
+
+        console.log(box1);
+        console.log(box2);
+        extent = box1.concat(box2);
+
+        return extent;
+      }
+
+      // Update rectangle on bounds update
+      $scope.$watch('request.bounds', function(bbox) {
+
+
+        var request_extent = bboxToExtent(bbox, 'EPSG:3857');
+        if (bbox) {
+          var bounds = new ol.geom.Polygon.fromExtent(request_extent);
+          console.log('Lat/Lon => WebMerc');
+
+          var feature = new ol.Feature({
+            geometry: bounds
+          });
+          var vS = vector.getSource();
+          vS.clear();
+
+          feature.setStyle(bboxStyle);
+          vS.addFeature(feature);
+          vS.refresh();
+
+          var extent = vS.getExtent();
+          map.getView().fit(extent, map.getSize());
+        }
+      });
+
+      return {
+        map: map,
+        rectangle: rectangle
+      };
+    }
+
+    // Function to initialise the map and associated behaviours
+    $scope.initMapg = function initMapg() {
       var mapOptions = {
-        center: new google.maps.LatLng(38.952162,-80.175781), // America
+        center: new google.maps.LatLng(38.952162, -80.175781), // America
         zoom: 1,
         mapTypeId: google.maps.MapTypeId.ROADMAP
       };
@@ -217,7 +358,7 @@ builder.controller("builder", ["$scope", "$http",
       function updateMapBounds(bounds) {
         var ne = rectangle.getBounds().getNorthEast();
         var sw = rectangle.getBounds().getSouthWest();
-        
+
         $scope.request.bounds = {
           minx: sw.lng(),
           maxx: ne.lng(),
@@ -243,15 +384,19 @@ builder.controller("builder", ["$scope", "$http",
           // Add and remove listener to stop an infinite update loop
           // between the map and the bounds inputs
           google.maps.event.removeListener(boundsListener);
-          rectangle.setOptions({bounds: bounds}); // do the update
+          rectangle.setOptions({
+            bounds: bounds
+          }); // do the update
           boundsListener = google.maps.event.addListener(rectangle, 'bounds_changed', updateMapBounds);
         }
       });
 
       rectangle.setMap(map);
 
-      return {map: map, rectangle: rectangle};
+      return {
+        map: map,
+        rectangle: rectangle
+      };
     }
-  }]);
-
-
+  }
+]);

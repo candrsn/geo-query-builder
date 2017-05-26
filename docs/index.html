@@ -2,7 +2,13 @@
 <html ng-app="builder">
   <head>
     <title>Geo Query Builder</title>
-    <script type="text/javascript" src="https://maps.googleapis.com/maps/api/js?key=AIzaSyDKg4IdwOWLVO69g36S_l_btIC0hbZS1Ps&libraries=drawing&sensor=false"></script>
+    <!-- OpenLayers 2.13 -->
+    <!-- <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/openlayers/2.13.1/lib/OpenLayers.js"></script> -->
+
+    <!-- OpenLayers 4.1.1 -->
+    <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/openlayers/4.1.1/ol.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/openlayers/4.1.1/ol.css" type="text/css" />
+
     <script src="lib/jquery-2.0.3.min.js"></script>
     <script src="lib/xml2json.js"></script>
     <script src="lib/angular.min.js"></script>
@@ -129,7 +135,7 @@
           </fieldset>
 
           <fieldset class="col-md-6">
-            <div id="map" ng-init="initMap()"></div>
+            <div id="map" class="map" ng-init="initMap()"></div>
           </fieldset>
         </fieldset>
         
